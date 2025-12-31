@@ -13,12 +13,12 @@ public class CarService {
     // In-memory storage for cars
     private final Map<Long, Car> cars = new HashMap<>();
 
-    private final AtomicLong carIdGenerator = new AtomicLong(1);
+    private final AtomicLong idGenerator = new AtomicLong(1);
 
     // Create a new car
     public Car createCar(Car car) {
         validateCar(car);
-        long id = carIdGenerator.getAndIncrement();
+        long id = idGenerator.getAndIncrement();
         car.setId(id);
         cars.put(id, car);
 
@@ -32,13 +32,13 @@ public class CarService {
 
     // Get a car by id
     public Car getCarById(Long id) {
-        validateCarIdExists(id);
+        validateIdExists(id);
         Car car = cars.get(id);
         return car;
     }
     // Update a car
     public Car updateCar(Long id, Car car) {
-        validateCarIdExists(id);
+        validateIdExists(id);
         validateCar(car);
         Car existingCar = getCarById(id);
         existingCar.setBrand(car.getBrand());
@@ -51,7 +51,7 @@ public class CarService {
 
     // Delete a car
     public void deleteCar(Long id) {
-        validateCarIdExists(id);
+        validateIdExists(id);
 
         cars.remove(id);
     }
@@ -100,7 +100,7 @@ public class CarService {
         }
     }
 
-    private void validateCarIdExists(Long id) {
+    private void validateIdExists(Long id) {
         if (id == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Car ID cannot be null");
         }

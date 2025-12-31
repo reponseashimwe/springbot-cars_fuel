@@ -26,9 +26,9 @@ public class CarController {
     }
 
     // GET a car by id
-    @GetMapping("/{carId}")
-    public Car getCarById(@PathVariable Long carId) {
-        return carService.getCarById(carId);
+    @GetMapping("/{id}")
+    public Car getCarById(@PathVariable Long id) {
+        return carService.getCarById(id);
     }
 
     // POST a new car
@@ -39,17 +39,17 @@ public class CarController {
     }
     
     // PUT an existing car
-    @PutMapping("/{carId}")
-    public Car updateCar(@PathVariable Long carId, @RequestBody Car car) {
-        return carService.updateCar(carId, car);
+    @PutMapping("/{id}")
+    public Car updateCar(@PathVariable Long id, @RequestBody Car car) {
+        return carService.updateCar(id, car);
     }
     
     // DELETE a car
-    @DeleteMapping("/{carId}")
-    public ResponseEntity<Map<String, String>> deleteCar(@PathVariable Long carId) {
-        carService.deleteCar(carId);
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, String>> deleteCar(@PathVariable Long id) {
+        carService.deleteCar(id);
         Map<String, String> response = new HashMap<>();
-        response.put("message", "Car with ID " + carId + " has been successfully deleted");
+        response.put("message", "Car with ID " + id + " has been successfully deleted");
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
