@@ -9,14 +9,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.example.cars.model.Car;
 import com.example.cars.service.CarService;
+import com.example.cars.service.FuelEntryService;
+import com.example.cars.model.FuelEntry;
 
 @RestController
-@RequestMapping("api/cars")
+@RequestMapping("/api/cars")
 public class CarController {
     private final CarService carService;
+    private final FuelEntryService fuelEntryService;
 
-    public CarController(CarService carService) {
+    public CarController(CarService carService, FuelEntryService fuelEntryService) {
         this.carService = carService;
+        this.fuelEntryService = fuelEntryService;
     }
 
     // GET all cars
@@ -51,5 +55,25 @@ public class CarController {
         Map<String, String> response = new HashMap<>();
         response.put("message", "Car with ID " + id + " has been successfully deleted");
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    // Fill a car with fuel
+    @PostMapping("/{id}/fuel")
+    public ResponseEntity<FuelEntry> fillCarWithFuel(@PathVariable Long id, @RequestBody FuelEntry fuelEntry) {
+        fuelEntry.setCarId(id);
+        FuelEntry createdFuelEntry = fuelEntryService.createFuelEntry(fuelEntry);
+        return new ResponseEntity<>(createdFuelEntry, HttpStatus.CREATED);
+    }
+
+    // GET all fuel entries for a car
+    @GetMapping("/{id}/fuel")
+    public List<FuelEntry> getAllFuelEntries(@PathVariable Long id) {
+        return fuelEntryService.getAllFuelEntriesByCarId(id);
+    }
+
+    // GET fuel stats for a car
+    @GetMapping("/{id}/fuel/stats")
+    public Map<String, Double> getFuelStats(@PathVariable Long id) {
+        return fuelEntryService.getFuelStats(id);
     }
 }
