@@ -13,7 +13,7 @@ public class CarCLI {
      */
     public static void listCars() throws IOException, InterruptedException {
         HttpResponse<String> response = CliUtils.get(BASE_URL);
-        CliUtils.printResponse(response);
+        CliUtils.printListResponse(response);
     }
 
     /**
@@ -29,7 +29,7 @@ public class CarCLI {
         }
 
         HttpResponse<String> response = CliUtils.get(BASE_URL + "/" + carId);
-        CliUtils.printResponse(response);
+        CliUtils.printListResponse(response);
     }
 
     /**
@@ -56,7 +56,7 @@ public class CarCLI {
         String json = CliUtils.buildJson(carData);
 
         HttpResponse<String> response = CliUtils.post(BASE_URL, json);
-        CliUtils.printResponse(response);
+        CliUtils.printActionResponse(response);
     }
 
     /**
@@ -88,7 +88,7 @@ public class CarCLI {
         String json = CliUtils.buildJson(carData);
 
         HttpResponse<String> response = CliUtils.put(BASE_URL + "/" + carId, json);
-        CliUtils.printResponse(response);
+        CliUtils.printActionResponse(response);
     }
 
     /**
@@ -104,7 +104,7 @@ public class CarCLI {
         }
 
         HttpResponse<String> response = CliUtils.delete(BASE_URL + "/" + carId);
-        CliUtils.printResponse(response);
+        CliUtils.printActionResponse(response);
     }
 }
 

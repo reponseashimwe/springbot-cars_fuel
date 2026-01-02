@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -91,6 +92,12 @@ public class FuelStatsServlet extends HttpServlet {
             writer.write(json);
             writer.flush();
             
+        } catch (ResponseStatusException e) {
+            // Handle Spring's ResponseStatusException from ValidationUtils
+            int statusCode = e.getStatusCode().value();
+            String message = e.getReason() != null ? e.getReason() : e.getMessage();
+            sendErrorResponse(response, statusCode, message != null ? message : "An error occurred");
+            
         } catch (IllegalArgumentException e) {
             // Service layer throws IllegalArgumentException for validation/not found errors
             String message = e.getMessage();
@@ -99,59 +106,11 @@ public class FuelStatsServlet extends HttpServlet {
                 : HttpServletResponse.SC_BAD_REQUEST;
             sendErrorResponse(response, statusCode, message != null ? message : "An error occurred");
             
-        } catch (RuntimeException e) {
-            // Handle Spring's ResponseStatusException from ValidationUtils using reflection
-            int statusCode = extractStatusCodeFromResponseStatusException(e);
-            String message = extractMessageFromException(e);
-            
-            if (statusCode == -1) {
-                // Not a ResponseStatusException, determine from message
-                statusCode = (message != null && message.toLowerCase().contains("not found"))
-                    ? HttpServletResponse.SC_NOT_FOUND
-                    : HttpServletResponse.SC_BAD_REQUEST;
-            }
-            sendErrorResponse(response, statusCode, message != null ? message : "An error occurred");
-            
         } catch (Exception e) {
             // Internal server error
             sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, 
                 "An unexpected error occurred");
         }
-    }
-    
-    // Extracts HTTP status code from Spring's ResponseStatusException using reflection, returns -1 if not a ResponseStatusException
-    private int extractStatusCodeFromResponseStatusException(RuntimeException e) {
-        String className = e.getClass().getName();
-        if (className.equals("org.springframework.web.server.ResponseStatusException")) {
-            try {
-                java.lang.reflect.Method getStatusCode = e.getClass().getMethod("getStatusCode");
-                Object statusCode = getStatusCode.invoke(e);
-                java.lang.reflect.Method value = statusCode.getClass().getMethod("value");
-                return (Integer) value.invoke(statusCode);
-            } catch (Exception ex) {
-                // Reflection failed, return -1 to use fallback
-            }
-        }
-        return -1;
-    }
-    
-    // Extracts clean message from exception - for ResponseStatusException gets reason, otherwise returns message as-is
-    private String extractMessageFromException(RuntimeException e) {
-        String className = e.getClass().getName();
-        if (className.equals("org.springframework.web.server.ResponseStatusException")) {
-            try {
-                // Extract the reason (clean message) from ResponseStatusException
-                java.lang.reflect.Method getReason = e.getClass().getMethod("getReason");
-                String reason = (String) getReason.invoke(e);
-                if (reason != null && !reason.isEmpty()) {
-                    return reason;
-                }
-            } catch (Exception ex) {
-                // Reflection failed, fall through to getMessage()
-            }
-        }
-        // For other exceptions, return the message as-is
-        return e.getMessage();
     }
     
     // Sends error response with consistent JSON structure using Response wrapper (same as REST API)
