@@ -92,64 +92,58 @@ public class FuelEntryService {
         
         stats.put("totalLiters", totalLiters);
         stats.put("totalPrice", totalPrice);
-        
-        // Calculate total distance driven: max odometer - min odometer
-        // Sort entries by odometer to find min and max values
-        List<FuelEntry> sortedByOdometer = fuelEntries.stream()
-            .sorted(Comparator.comparingInt(FuelEntry::getOdometer))
-            .collect(Collectors.toList());
-        
-        int minOdometer = sortedByOdometer.get(0).getOdometer();
-        int maxOdometer = sortedByOdometer.get(sortedByOdometer.size() - 1).getOdometer();
-        
-        // Calculate total distance
-        int totalDistance;
-        if (sortedByOdometer.size() == 1) {
-            // Only one entry: assume car started at 0, so distance = odometer reading
-            totalDistance = maxOdometer;
-        } else if (minOdometer == maxOdometer) {
-            // All entries have same odometer: car hasn't moved, distance is 0
-            totalDistance = 0;
-        } else {
-            // Multiple entries with different odometer readings
-            totalDistance = maxOdometer - minOdometer;
-        }
-        
-        // Calculate average fuel consumption per 100km
-        double avgPer100km = 0.0;
-        
-        // Handle division by zero: if distance <= 0, consumption cannot be calculated
-        if (totalDistance <= 0) {
-            avgPer100km = 0.0;
-        } else if (fuelEntries.size() == 1) {
-            // Single entry: all fuel was consumed to drive from 0 to odometer reading
-            // Car started at 0km, filled up at X km with Y liters
-            // All Y liters were used to drive X km
-            double fuelConsumed = fuelEntries.get(0).getLiters();
-            avgPer100km = (fuelConsumed / totalDistance) * 100.0;
-            // Round to 2 decimal places
-            avgPer100km = Math.round(avgPer100km * 100.0) / 100.0;
-        } else {
-            // Multiple entries: exclude the most recent entry (by timestamp) as it represents fuel still in tank
-            FuelEntry mostRecentEntry = fuelEntries.stream()
-                .max(Comparator.comparing(FuelEntry::getTimestamp))
-                .orElse(null);
-            
-            // Calculate fuel consumed: sum of all entries except the most recent one
-            double fuelConsumed = fuelEntries.stream()
-                .filter(entry -> !entry.equals(mostRecentEntry))
-                .mapToDouble(FuelEntry::getLiters)
-                .sum();
-            
-            // Formula: (Total fuel consumed / Total distance driven) × 100
-            avgPer100km = (fuelConsumed / totalDistance) * 100.0;
-            // Round to 2 decimal places
-            avgPer100km = Math.round(avgPer100km * 100.0) / 100.0;
-        }
-        
-        stats.put("avgPer100km", avgPer100km);
+        stats.put("avgPer100km", calculateAverageConsumption(fuelEntries));
         
         return stats;
+    }
+    
+    // Calculates average fuel consumption per 100km (optimized single-pass algorithm)
+    private double calculateAverageConsumption(List<FuelEntry> fuelEntries) {
+        // Need at least 2 entries to calculate distance traveled
+        if (fuelEntries.size() < 2) {
+            return 0.0;
+        }
+        
+        // Single pass: find min/max odometer, most recent entry, and total fuel
+        int minOdometer = Integer.MAX_VALUE;
+        int maxOdometer = Integer.MIN_VALUE;
+        FuelEntry mostRecentEntry = null;
+        LocalDateTime mostRecentTimestamp = null;
+        double totalFuel = 0.0;
+        
+        for (FuelEntry entry : fuelEntries) {
+            int odometer = entry.getOdometer();
+            if (odometer < minOdometer) {
+                minOdometer = odometer;
+            }
+            if (odometer > maxOdometer) {
+                maxOdometer = odometer;
+            }
+            
+            LocalDateTime timestamp = entry.getTimestamp();
+            if (mostRecentTimestamp == null || (timestamp != null && timestamp.isAfter(mostRecentTimestamp))) {
+                mostRecentTimestamp = timestamp;
+                mostRecentEntry = entry;
+            }
+            
+            totalFuel += entry.getLiters();
+        }
+        
+        // Calculate distance
+        int totalDistance = maxOdometer - minOdometer;
+        if (totalDistance <= 0) {
+            return 0.0;
+        }
+        
+        // Calculate fuel consumed (exclude most recent entry - fuel still in tank)
+        double fuelConsumed = totalFuel;
+        if (mostRecentEntry != null) {
+            fuelConsumed -= mostRecentEntry.getLiters();
+        }
+        
+        // Formula: (Total fuel consumed / Total distance driven) × 100
+        double avgPer100km = (fuelConsumed / totalDistance) * 100.0;
+        return Math.round(avgPer100km * 100.0) / 100.0;
     }
 
     // Get all fuel entries by car id

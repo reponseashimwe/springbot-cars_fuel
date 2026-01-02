@@ -17,7 +17,7 @@ public class FuelEntryCLI {
      */
     public static void listFuelEntries() throws IOException, InterruptedException {
         HttpResponse<String> response = CliUtils.get(BASE_URL);
-        CliUtils.printResponse(response);
+        CliUtils.printListResponse(response);
     }
 
     /**
@@ -33,7 +33,7 @@ public class FuelEntryCLI {
         }
 
         HttpResponse<String> response = CliUtils.get(BASE_URL + "/" + id);
-        CliUtils.printResponse(response);
+        CliUtils.printListResponse(response);
     }
 
     /**
@@ -85,7 +85,7 @@ public class FuelEntryCLI {
         String json = CliUtils.buildJson(fuelEntryData);
 
         HttpResponse<String> response = CliUtils.post(CARS_BASE_URL + "/" + carId + "/fuel", json);
-        CliUtils.printResponse(response);
+        CliUtils.printActionResponse(response);
     }
 
     /**
@@ -101,7 +101,7 @@ public class FuelEntryCLI {
         }
 
         HttpResponse<String> response = CliUtils.get(CARS_BASE_URL + "/" + carId + "/fuel");
-        CliUtils.printResponse(response);
+        CliUtils.printListResponse(response);
     }
 
     /**
@@ -119,17 +119,30 @@ public class FuelEntryCLI {
         HttpResponse<String> response = CliUtils.get(CARS_BASE_URL + "/" + carId + "/fuel/stats");
         
         if (response.statusCode() >= 400) {
-            // Use the standard error handling from CliUtils
-            CliUtils.printResponse(response);
+            // Extract and display error message
+            String errorMessage = CliUtils.extractErrorMessage(response.body());
+            if (errorMessage != null) {
+                System.err.println("ERROR: " + errorMessage);
+            } else {
+                System.err.println("ERROR: HTTP " + response.statusCode());
+            }
             return;
         }
 
         // Parse JSON and format as text
         try {
-            JsonNode stats = objectMapper.readTree(response.body());
-            double totalLiters = stats.get("totalLiters").asDouble();
-            double totalPrice = stats.get("totalPrice").asDouble();
-            double avgPer100km = stats.get("avgPer100km").asDouble();
+            JsonNode responseNode = objectMapper.readTree(response.body());
+            // Unwrap the Response object to get the data field
+            JsonNode dataNode = responseNode.get("data");
+            if (dataNode == null) {
+                // Fallback if data field is missing
+                CliUtils.printResponse(response);
+                return;
+            }
+            
+            double totalLiters = dataNode.get("totalLiters").asDouble();
+            double totalPrice = dataNode.get("totalPrice").asDouble();
+            double avgPer100km = dataNode.get("avgPer100km").asDouble();
             
             // Format output as specified
             System.out.println("Total fuel: " + formatLiters(totalLiters) + " L");
@@ -215,7 +228,7 @@ public class FuelEntryCLI {
         String json = CliUtils.buildJson(fuelEntryData);
 
         HttpResponse<String> response = CliUtils.put(BASE_URL + "/" + id, json);
-        CliUtils.printResponse(response);
+        CliUtils.printActionResponse(response);
     }
 
     /**
@@ -231,7 +244,7 @@ public class FuelEntryCLI {
         }
 
         HttpResponse<String> response = CliUtils.delete(BASE_URL + "/" + id);
-        CliUtils.printResponse(response);
+        CliUtils.printActionResponse(response);
     }
 }
 
